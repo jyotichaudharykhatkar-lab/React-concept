@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchPosts, addPost, updatePost } from '../redux/slices/postsSlice';
 import {
   Table,
   TableBody,
@@ -20,30 +22,17 @@ import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
 
 export default function ApiTable() {
-  const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const dispatch = useDispatch();
+  const { items: posts, loading, error } = useSelector((state) => state.posts);
+  
   const [openDialog, setOpenDialog] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({ title: '', body: '' });
 
-  // Fetch data from API
+  // Fetch posts on component mount
   useEffect(() => {
-    fetchPosts();
-  }, []);
-
-  const fetchPosts = async () => {
-    try {
-      setLoading(true);
-      // Using JSONPlaceholder - free API for testing
-      const response = await fetch('https://jsonplaceholder.typicode.com/posts?_limit=5');
-      const data = await response.json();
-      setPosts(data);
-    } catch (error) {
-      console.error('Error fetching posts:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    dispatch(fetchPosts());
+  }, [dispatch]);
 
   const handleAddClick = () => {
     setEditingId(null);
@@ -63,20 +52,11 @@ export default function ApiTable() {
 
   const handleSave = () => {
     if (editingId) {
-      // Edit existing
-      setPosts(
-        posts.map((post) =>
-          post.id === editingId ? { ...post, ...formData } : post
-        )
-      );
+      // Edit existing post
+      dispatch(updatePost({ id: editingId, ...formData }));
     } else {
-      // Add new
-      const newPost = {
-        id: posts.length + 1,
-        ...formData,
-        userId: 1,
-      };
-      setPosts([newPost, ...posts]);
+      // Add new post
+      dispatch(addPost(formData));
     }
     handleClose();
   };
@@ -90,6 +70,14 @@ export default function ApiTable() {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
         <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ padding: '20px', color: 'red' }}>
+        <h2>Error loading posts: {error}</h2>
       </Box>
     );
   }
